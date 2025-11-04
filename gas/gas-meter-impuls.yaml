@@ -1,10 +1,11 @@
-esp8266:
-  board: d1_mini
-  restore_from_flash: true
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
 
 esphome:
-  name: "gasmeter-impctr"
-  friendly_name: Gas Meter Impuls
+  name: utilitymeter-gas
+  friendly_name: utilitymeter-gas
 
   on_boot:
     then:
@@ -23,17 +24,12 @@ esphome:
         format: "Stored pulses %d, total %.3f"
         args: [ 'id(gas_total_pulses)', 'id(gas_total).state' ]
 
-preferences:
-  flash_write_interval: 15 minutes
 
 # Enable logging
 logger:
 
 # Enable Home Assistant API
 api:
-  encryption:
-    key: !secret api_key
-
   services:
     - service: set_gas_total
       variables:
@@ -44,11 +40,18 @@ api:
           value: !lambda return m3 * 100;
 
 ota:
-  password: !secret ota_password
+  - platform: esphome
+    password: "34f4b2250044231e984de541652129ac"
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  fast_connect: true
+  
+  manual_ip:
+    static_ip: 192.168.0.142
+    gateway: 192.168.0.1
+    subnet: 255.255.255.0
 
 globals:
   - id: gas_total_pulses
@@ -57,23 +60,23 @@ globals:
     # You can set this on when first flashing to start with a meaningful value
     # initial_value: "0"
 
-binary_sensor:
-  # This is an optional sensor that can be used to see when the inductive
-  # sensor registers a signal via Home Assistant.
-  - platform: gpio
-    id: live_impulse
-    pin:
-      number: GPIO5
-      mode: INPUT_PULLUP
-    name: "Live Impuls"
-    filters:
-      - delayed_on: 100ms
-    on_press:
-      then:
-        - output.turn_on: led
-    on_release:
-      then:
-        - output.turn_off: led
+# binary_sensor:
+#   # This is an optional sensor that can be used to see when the inductive
+#   # sensor registers a signal via Home Assistant.
+#   - platform: gpio
+#     id: live_impulse
+#     pin:
+#       number: GPIO5
+#       mode: INPUT_PULLUP
+#     name: "Live Impuls"
+#     filters:
+#       - delayed_on: 100ms
+#     on_press:
+#       then:
+#         - output.turn_on: led
+#     on_release:
+#       then:
+#         - output.turn_off: led
 
 sensor:
   # This is configurd for meter that gives 1 impuls for every 0.01m³ of gas.
@@ -88,6 +91,16 @@ sensor:
     name: Gas usage
     internal_filter: 100ms
     internal_filter_mode: PULSE
+
+            
+    # on_value_range:
+    #   - above: 0.005
+    #     then:
+    #       - output.turn_on: led
+    #   - below: 0.005
+    #     then:
+    #       - output.turn_off: led
+
     accuracy_decimals: 3
     filters:
       - lambda: return x * (60.0 / 100);
@@ -118,11 +131,11 @@ sensor:
     unit_of_measurement: "%"
     entity_category: "diagnostic"
 
-# Sync LED to live impulse
-output:
-  - platform: gpio
-    pin:
-      # This is the builtin LED
-      number: GPIO2
-      inverted: true
-    id: 'led'
+# # Sync LED to live impulse
+# output:
+#   - platform: gpio
+#     pin:
+#       # This is the builtin LED
+#       number: GPIO2
+#       inverted: true
+#     id: 'led'
